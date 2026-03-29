@@ -342,7 +342,6 @@ export default function TooltipDemo() {
   const uText    = isDark ? '#e5e7eb' : '#111827';
   const uSubtext = isDark ? '#9ca3af' : '#374151';
   const uMuted   = isDark ? '#6b7280' : '#8b95a1';
-  const uCard    = isDark ? '#111827' : '#f8f9fb';
 
   // Shared icon-button style
   const iconBtn: React.CSSProperties = {

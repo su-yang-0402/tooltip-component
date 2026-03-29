@@ -1,4 +1,3 @@
-import React from 'react';
 
 export interface MobileTooltipProps {
   /** Show the title. Defaults to true. */

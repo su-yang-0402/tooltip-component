@@ -1,4 +1,3 @@
-import React from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +12,8 @@ export interface DataRow {
   trend?: 'up' | 'down' | null;
   /** Show the colored legend dot. Defaults to true. */
   hasLegend?: boolean;
+  /** Show the trend arrow icon. Defaults to true. */
+  hasIcon?: boolean;
 }
 
 export interface TooltipProps {
