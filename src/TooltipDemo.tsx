@@ -563,42 +563,6 @@ export default function TooltipDemo() {
             </Anchor>
           </div>
 
-          <Divider isDark={isDark} />
-
-          {/* Trend Icon (instance swap) */}
-          <SubHeading isDark={isDark}>Trend Icon</SubHeading>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Anchor placement="Up"
-              tip={<Tooltip type="Data" placement="Up" hasTitle={false} hasSubtitle={false} hasAction={false}
-                dataRows={[
-                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', trendIcon: 'arrow' },
-                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   trendIcon: 'arrow' },
-                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null },
-                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null },
-                ]} />}>
-              <button style={textBtn}>Arrow</button>
-            </Anchor>
-            <Anchor placement="Up"
-              tip={<Tooltip type="Data" placement="Up" hasTitle={false} hasSubtitle={false} hasAction={false}
-                dataRows={[
-                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', trendIcon: 'chevron' },
-                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   trendIcon: 'chevron' },
-                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null },
-                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null },
-                ]} />}>
-              <button style={textBtn}>Chevron</button>
-            </Anchor>
-            <Anchor placement="Up"
-              tip={<Tooltip type="Data" placement="Up" hasTitle={false} hasSubtitle={false} hasAction={false}
-                dataRows={[
-                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', trendIcon: 'caret' },
-                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   trendIcon: 'caret' },
-                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null },
-                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null },
-                ]} />}>
-              <button style={textBtn}>Caret</button>
-            </Anchor>
-          </div>
 
         </Section>
 
