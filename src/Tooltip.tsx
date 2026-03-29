@@ -12,6 +12,8 @@ export interface DataRow {
   trend?: 'up' | 'down' | null;
   /** Show the colored legend dot. Defaults to true. */
   hasLegend?: boolean;
+  /** Shape of the legend indicator. Defaults to 'square'. Instance-swappable in Figma. */
+  legendShape?: 'square' | 'circle' | 'line';
   /** Show the trend arrow icon. Defaults to true. */
   hasIcon?: boolean;
 }
@@ -177,9 +179,15 @@ export default function Tooltip({
               <div key={row.label} className="flex items-center justify-between w-full">
                 {/* Label */}
                 <div className="flex gap-1 items-center">
-                  {row.hasLegend !== false && (
-                    <div className={`${chartClasses[row.color].bg} size-2 shrink-0`} />
-                  )}
+                  {row.hasLegend !== false && (() => {
+                    const shape = row.legendShape ?? 'square';
+                    const bg = chartClasses[row.color].bg;
+                    if (shape === 'circle')
+                      return <div className={`${bg} size-2 rounded-full shrink-0`} />;
+                    if (shape === 'line')
+                      return <div className={`${bg} w-3 h-[2px] rounded-full shrink-0`} />;
+                    return <div className={`${bg} size-2 shrink-0`} />;
+                  })()}
                   <span className="text-body-xs font-normal text-text-inverse-subtle whitespace-nowrap">
                     {row.label}
                   </span>
