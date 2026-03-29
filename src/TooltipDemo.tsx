@@ -554,10 +554,10 @@ export default function TooltipDemo() {
             <Anchor placement="Up"
               tip={<Tooltip type="Data" placement="Up" hasTitle={false} hasSubtitle={false} hasAction={false}
                 dataRows={[
-                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', hasLegend: false, hasIcon: false, hasValueColor: false },
-                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   hasLegend: false, hasIcon: false, hasValueColor: false },
-                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null,   hasLegend: false, hasIcon: false, hasValueColor: false },
-                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null,   hasLegend: false, hasIcon: false, hasValueColor: false },
+                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', hasLegend: false, hasIcon: false },
+                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   hasLegend: false, hasIcon: false },
+                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null,   hasLegend: false, hasIcon: false },
+                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null,   hasLegend: false, hasIcon: false },
                 ]} />}>
               <button style={textBtn}>No legend &amp; icon</button>
             </Anchor>

@@ -14,8 +14,6 @@ export interface DataRow {
   hasLegend?: boolean;
   /** Show the trend icon. Defaults to true. */
   hasIcon?: boolean;
-  /** Apply chart color to the value text. Defaults to true. */
-  hasValueColor?: boolean;
   /** Icon style for the trend indicator. Defaults to 'arrow'. Instance-swappable in Figma. */
   trendIcon?: 'arrow' | 'chevron' | 'caret';
 }
@@ -207,15 +205,15 @@ export default function Tooltip({
                   </span>
                 </div>
                 {/* Value */}
-                <div className={`flex gap-1 items-center ${row.hasValueColor !== false ? chartClasses[row.color].text : 'text-text-inverse'}`}>
+                <div className="flex gap-1 items-center">
                   {row.hasIcon !== false && row.trend !== null && (() => {
                     const style = row.trendIcon ?? 'arrow';
                     const isUp = row.trend === 'up';
-                    if (style === 'chevron') return isUp ? <ChevronUpIcon className="size-4 shrink-0" /> : <ChevronDownIcon className="size-4 shrink-0" />;
-                    if (style === 'caret')   return isUp ? <CaretUpIcon   className="size-4 shrink-0" /> : <CaretDownIcon   className="size-4 shrink-0" />;
-                    return isUp ? <ArrowUpIcon className="size-4 shrink-0" /> : <ArrowDownIcon className="size-4 shrink-0" />;
+                    if (style === 'chevron') return isUp ? <ChevronUpIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <ChevronDownIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
+                    if (style === 'caret')   return isUp ? <CaretUpIcon   className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <CaretDownIcon   className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
+                    return isUp ? <ArrowUpIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <ArrowDownIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
                   })()}
-                  <span className="text-body-xs font-normal text-right whitespace-nowrap">
+                  <span className="text-body-xs font-normal text-text-inverse text-right whitespace-nowrap">
                     {row.value}
                   </span>
                 </div>
