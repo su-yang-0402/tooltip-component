@@ -95,8 +95,8 @@ All semantic tokens alias into the Color Primitives collection.
 | `Text/Default` | Grey/900 | `#171717` | Grey/50 | `#f9f9f9` |
 | `Text/Subtle` | Grey/500 | `#737373` | Grey/400 | `#a3a3a3` |
 | `Text/Inverse` | Grey/50 | `#f9f9f9` | Grey/50 | `#f9f9f9` |
-| `Text/Inverse-subtle` | Grey/400 | `#a3a3a3` | Grey/300 | `#d4d4d4` |
-| `Text/Disabled` | Grey/300 | `#d4d4d4` | Grey/600 | `#525252` |
+| `Text/Inverse-subtle` | Grey/300 | `#d4d4d4` | Grey/300 | `#d4d4d4` |
+| `Text/Disabled` | Grey/400 | `#b0b0b0` | Grey/600 | `#525252` |
 | `Text/Primary` | Brand/500 | `#006fff` | Brand/400 | `#4093ff` |
 | `Text/Primary-on-dark` | Brand/400 | `#4093ff` | Brand/300 | `#80b7ff` |
 | `Text/Primary-hover` | Brand/600 | `#005ed9` | Brand/300 | `#80b7ff` |
@@ -122,7 +122,7 @@ All semantic tokens alias into the Color Primitives collection.
 |---|---|---|
 | Container background | `Fill/Background/Tooltip` | `#262626` light · `#404040` dark |
 | Primary text (label, title) | `Text/Inverse` | `#f9f9f9` in both modes |
-| Secondary text (time label, row labels) | `Text/Inverse-subtle` | `#a3a3a3` light · `#d4d4d4` dark |
+| Secondary text (time label, row labels) | `Text/Inverse-subtle` | `#d4d4d4` light · `#d4d4d4` dark |
 | Action link (Learn more) | `Text/Primary-on-dark` | `#4093ff` light · `#80b7ff` dark |
 | Action link hover | `Text/Primary-hover` | `#005ed9` light · `#80b7ff` dark |
 | Download legend + value | `Chart/Download` | `#4acfdc` both modes |
@@ -161,8 +161,8 @@ All semantic tokens alias into the Color Primitives collection.
 |---|---|---|
 | `Radius/100` | 4 | — |
 | `Radius/200` | 8 | Desktop tooltip container (`rounded-tooltip`) |
-| `Radius/400` | 16 | MobileTooltip top corners (`rounded-t-[16px]`) |
-| `Radius/Full` | 9999 | Mobile drag handle pill |
+| `Radius/400` | 16 | MobileTooltip top corners (`rounded-t-sheet`) |
+| `Radius/Full` | 9999 | Mobile drag handle pill (`rounded-full`) |
 
 ### Icon sizes
 
@@ -283,7 +283,7 @@ box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.60);
 | `Grey/100` | `#f3f3f3` |
 | `Grey/200` | `#e5e5e5` |
 | `Grey/300` | `#d4d4d4` |
-| `Grey/400` | `#a3a3a3` |
+| `Grey/400` | `#b0b0b0` |
 | `Grey/500` | `#737373` |
 | `Grey/600` | `#525252` |
 | `Grey/700` | `#404040` ← tooltip bg dark mode |
@@ -351,7 +351,7 @@ The implementation maps Figma tokens to Tailwind CSS v4 `@theme` variables in `s
 
   /* Text on dark bg */
   --color-text-inverse: #f9f9f9;      /* Text/Inverse (both modes) */
-  --color-text-inverse-subtle: #a3a3a3; /* Text/Inverse-subtle Light */
+  --color-text-inverse-subtle: #d4d4d4; /* Text/Inverse-subtle Light (Grey/300) */
 
   /* Action link */
   --color-action-primary: #4093ff;   /* Text/Primary-on-dark Light */
@@ -365,6 +365,8 @@ The implementation maps Figma tokens to Tailwind CSS v4 `@theme` variables in `s
 
   /* Shape */
   --radius-tooltip: 8px;             /* Radius/200 */
+  --radius-sheet: 16px;              /* Radius/400 */
+  --radius-full: 9999px;             /* Radius/Full */
 
   /* Shadow */
   --shadow-tooltip: 0px 4px 16px rgba(0, 0, 0, 0.12); /* Shadow light */
@@ -383,7 +385,7 @@ The implementation maps Figma tokens to Tailwind CSS v4 `@theme` variables in `s
 /* Dark mode overrides — applied when .dark is on an ancestor */
 .dark {
   --color-tooltip: #404040;              /* Fill/Background/Tooltip Dark */
-  --color-text-inverse-subtle: #d4d4d4; /* Text/Inverse-subtle Dark */
+  --color-text-inverse-subtle: #d4d4d4; /* Text/Inverse-subtle Dark (Grey/300, unchanged) */
   --color-action-primary: #80b7ff;      /* Text/Primary-on-dark Dark */
   --color-text-primary-hover: #4093ff;  /* Text/Primary-hover Dark */
   --color-chart-loss: #ff6b6b;          /* Chart/Loss Dark */
@@ -779,7 +781,7 @@ createPortal(
 |---|---|---|
 | `--color-tooltip` | `#262626` | `#404040` |
 | `--color-text-inverse` | `#f9f9f9` | `#f9f9f9` (unchanged) |
-| `--color-text-inverse-subtle` | `#a3a3a3` | `#d4d4d4` |
+| `--color-text-inverse-subtle` | `#d4d4d4` | `#d4d4d4` (unchanged) |
 | `--color-action-primary` | `#4093ff` | `#80b7ff` |
 | `--color-text-primary-hover` | `#005ed9` | `#4093ff` |
 | `--color-chart-loss` | `#e03030` | `#ff6b6b` |

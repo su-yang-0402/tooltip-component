@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -8,14 +9,12 @@ export type ChartColor = 'download' | 'upload' | 'latency' | 'loss';
 export interface DataRow {
   label: string;
   value: string;
-  color: ChartColor;
-  trend?: 'up' | 'down' | null;
+  /** Required when hasLegend is true */
+  color?: ChartColor;
+  /** Any icon to show before the value. Omit for no icon. */
+  icon?: ReactNode;
   /** Show the colored legend dot. Defaults to true. */
   hasLegend?: boolean;
-  /** Show the trend icon. Defaults to true. */
-  hasIcon?: boolean;
-  /** Icon style for the trend indicator. Defaults to 'arrow'. Instance-swappable in Figma. */
-  trendIcon?: 'arrow' | 'chevron' | 'caret';
 }
 
 export interface TooltipProps {
@@ -41,86 +40,54 @@ export interface TooltipProps {
   dataRows?: DataRow[];
   /** Called when the "Learn more" action is clicked */
   onAction?: () => void;
-  className?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Full class names must be spelled out so Tailwind includes them in the build
-const chartClasses: Record<ChartColor, { bg: string; text: string }> = {
-  download: { bg: 'bg-chart-download', text: 'text-chart-download' },
-  upload:   { bg: 'bg-chart-upload',   text: 'text-chart-upload'   },
-  latency:  { bg: 'bg-chart-latency',  text: 'text-chart-latency'  },
-  loss:     { bg: 'bg-chart-loss',     text: 'text-chart-loss'     },
+const chartClasses: Record<ChartColor, { bg: string }> = {
+  download: { bg: 'bg-chart-download' },
+  upload:   { bg: 'bg-chart-upload'   },
+  latency:  { bg: 'bg-chart-latency'  },
+  loss:     { bg: 'bg-chart-loss'     },
 };
 
 // Position the beak (arrow) on the correct edge based on placement
 // Offsets derived from Figma: inner beak is 8×8px rotated 45°, outer container is 8√2 ≈ 11.314px
 const beakPositionClasses: Record<TooltipPlacement, string> = {
-  Left:  'absolute -right-[5.31px] top-1/2 -translate-y-1/2',
-  Right: 'absolute -left-[5px]    top-1/2 -translate-y-1/2',
-  Up:    'absolute -bottom-[5.31px] left-1/2 -translate-x-1/2',
-  Down:  'absolute -top-[6px]      left-1/2 -translate-x-1/2',
+  Left:  'absolute -right-[4px] top-1/2 -translate-y-1/2',
+  Right: 'absolute -left-[4px]  top-1/2 -translate-y-1/2',
+  Up:    'absolute -bottom-[4px] left-1/2 -translate-x-1/2',
+  Down:  'absolute -top-[4px]   left-1/2 -translate-x-1/2',
 };
 
-const DEFAULT_DATA_ROWS: DataRow[] = [
-  { label: 'Download',    value: '7.05 KB', color: 'download', trend: 'down' },
-  { label: 'Upload',      value: '7.05 KB', color: 'upload',   trend: 'up'   },
-  { label: 'Latency',     value: '1 ms',    color: 'latency',  trend: null   },
-  { label: 'Packet Loss', value: '0 %',     color: 'loss',     trend: null   },
-];
+// ─── Icon components ──────────────────────────────────────────────────────────
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function ArrowUpIcon({ className }: { className?: string }) {
+export function ArrowUpIcon({ className }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
       <path d="M8 12.67V3.33" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path d="M4 7L8 3L12 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function ArrowDownIcon({ className }: { className?: string }) {
+export function ArrowDownIcon({ className }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
       <path d="M8 3.33V12.67" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path d="M4 9L8 13L12 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function ChevronUpIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
-      <path d="M4 10L8 6L12 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const DEFAULT_DATA_ROWS: DataRow[] = [
+  { label: 'Download',    value: '7.05 KB', color: 'download', icon: <ArrowDownIcon className="size-4 shrink-0 text-chart-download" /> },
+  { label: 'Upload',      value: '7.05 KB', color: 'upload',   icon: <ArrowUpIcon   className="size-4 shrink-0 text-chart-upload"   /> },
+  { label: 'Latency',     value: '1 ms',    color: 'latency' },
+  { label: 'Packet Loss', value: '0 %',     color: 'loss'    },
+];
 
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
-      <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CaretUpIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
-      <path d="M8 5L13 11H3L8 5Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function CaretDownIcon({ className }: { className?: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={className}>
-      <path d="M8 11L3 5H13L8 11Z" fill="currentColor" />
-    </svg>
-  );
-}
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
@@ -136,7 +103,6 @@ export default function Tooltip({
   subtitle = 'Mar 18 10:00 AM - Mar 19 9:50 AM',
   dataRows,
   onAction,
-  className,
 }: TooltipProps) {
   const resolvedTitle =
     title ?? (type === 'Rich' ? 'Approaching camera limit' : 'Apple messenger');
@@ -149,10 +115,7 @@ export default function Tooltip({
 
   return (
     <div
-      className={
-        className ??
-        `relative inline-flex flex-col items-start bg-tooltip rounded-tooltip shadow-tooltip p-3 max-w-[300px] ${outerGap}`
-      }
+      className={`relative inline-flex flex-col items-start bg-tooltip rounded-tooltip shadow-tooltip p-3 max-w-[300px] ${outerGap}`}
     >
       {/* Beak (directional arrow) — 8×8px square rotated 45°, outer wrapper = 8√2 ≈ 11.314px */}
       <div className={`${beakPositionClasses[placement]} flex items-center justify-center size-[11.314px] z-10`}>
@@ -197,8 +160,8 @@ export default function Tooltip({
               <div key={row.label} className="flex items-center justify-between w-full">
                 {/* Label */}
                 <div className="flex gap-1 items-center">
-                    {row.hasLegend !== false && (
-                    <div className={`${chartClasses[row.color].bg} size-2 shrink-0`} />
+                    {row.hasLegend !== false && row.color && (
+                    <div aria-hidden="true" className={`${chartClasses[row.color].bg} size-2 shrink-0`} />
                   )}
                   <span className="text-body-xs font-normal text-text-inverse-subtle whitespace-nowrap">
                     {row.label}
@@ -206,13 +169,7 @@ export default function Tooltip({
                 </div>
                 {/* Value */}
                 <div className="flex gap-1 items-center">
-                  {row.hasIcon !== false && row.trend !== null && (() => {
-                    const style = row.trendIcon ?? 'arrow';
-                    const isUp = row.trend === 'up';
-                    if (style === 'chevron') return isUp ? <ChevronUpIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <ChevronDownIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
-                    if (style === 'caret')   return isUp ? <CaretUpIcon   className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <CaretDownIcon   className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
-                    return isUp ? <ArrowUpIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} /> : <ArrowDownIcon className={`size-4 shrink-0 ${chartClasses[row.color].text}`} />;
-                  })()}
+                  {row.icon ?? null}
                   <span className="text-body-xs font-normal text-text-inverse text-right whitespace-nowrap">
                     {row.value}
                   </span>
@@ -234,6 +191,7 @@ export default function Tooltip({
       {(type === 'Rich' || type === 'Data') && hasAction && (
         <button
           onClick={onAction}
+          aria-label={`Learn more about ${resolvedTitle}`}
           className="text-action-s font-normal text-action-primary leading-5 whitespace-nowrap py-[6px] bg-transparent border-none cursor-pointer p-0 hover:text-text-primary-hover transition-colors duration-150"
         >
           Learn more

@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useId, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Tooltip from './Tooltip';
 import MobileTooltip from './MobileTooltip';
-import type { TooltipPlacement, DataRow } from './Tooltip';
+import { ArrowUpIcon, ArrowDownIcon } from './Tooltip';
+import type { TooltipPlacement, TooltipProps, DataRow } from './Tooltip';
 
 // ─── Dark mode context ────────────────────────────────────────────────────
 
@@ -10,7 +11,30 @@ const DarkCtx = React.createContext(false);
 
 // ─── Anchor ────────────────────────────────────────────────────────────────
 
-const GAP = 8;
+const GAP = 8; // 4px beak protrusion + 4px offset from beak tip to trigger
+const TOOLTIP_W = 316; // 300px max-width + beak + gap
+const TOOLTIP_H = 220; // rough max height for a full Data tooltip
+
+const OPPOSITE: Record<TooltipPlacement, TooltipPlacement> = {
+  Left: 'Right', Right: 'Left', Up: 'Down', Down: 'Up',
+};
+
+function resolvePlacement(rect: DOMRect, preferred: TooltipPlacement): TooltipPlacement {
+  const space: Record<TooltipPlacement, number> = {
+    Left:  rect.left,
+    Right: window.innerWidth  - rect.right,
+    Up:    rect.top,
+    Down:  window.innerHeight - rect.bottom,
+  };
+  const required: Record<TooltipPlacement, number> = {
+    Left: TOOLTIP_W, Right: TOOLTIP_W, Up: TOOLTIP_H, Down: TOOLTIP_H,
+  };
+  if (space[preferred] >= required[preferred]) return preferred;
+  const opp = OPPOSITE[preferred];
+  if (space[opp] >= required[opp]) return opp;
+  return (Object.entries(space) as [TooltipPlacement, number][])
+    .sort((a, b) => b[1] - a[1])[0][0];
+}
 
 let globalForceHide: (() => void) | null = null;
 
@@ -23,14 +47,28 @@ function getFixedStyle(rect: DOMRect, placement: TooltipPlacement): React.CSSPro
   }
 }
 
+// Transparent bridge that fills the gap between trigger and tooltip so the
+// mouse can travel diagonally without accidentally dismissing the tooltip.
+function getBridgeStyle(rect: DOMRect, placement: TooltipPlacement): React.CSSProperties {
+  switch (placement) {
+    case 'Up':    return { position:'fixed', left: rect.left, top: rect.top - GAP, width: rect.width, height: GAP };
+    case 'Down':  return { position:'fixed', left: rect.left, top: rect.bottom,    width: rect.width, height: GAP };
+    case 'Left':  return { position:'fixed', left: rect.left - GAP, top: rect.top, width: GAP, height: rect.height };
+    case 'Right': return { position:'fixed', left: rect.right,      top: rect.top, width: GAP, height: rect.height };
+  }
+}
+
 function Anchor({ children, tip, placement, className = 'inline-flex' }: {
-  children: React.ReactNode; tip: React.ReactNode;
+  children: React.ReactNode; tip: React.ReactElement<TooltipProps>;
   placement: TooltipPlacement; className?: string;
 }) {
   const isDark = React.useContext(DarkCtx);
   const ref = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [resolvedPlacement, setResolvedPlacement] = useState<TooltipPlacement>(placement);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tooltipId = useId();
 
   const forceHide = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -40,27 +78,106 @@ function Anchor({ children, tip, placement, className = 'inline-flex' }: {
     if (globalForceHide && globalForceHide !== forceHide) globalForceHide();
     globalForceHide = forceHide;
     if (timer.current) clearTimeout(timer.current);
-    if (ref.current) setRect(ref.current.getBoundingClientRect());
-  }, [forceHide]);
+    if (ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setRect(r);
+      setResolvedPlacement(resolvePlacement(r, placement));
+    }
+  }, [forceHide, placement]);
   const hide = useCallback(() => {
     timer.current = setTimeout(() => {
       setRect(null);
       if (globalForceHide === forceHide) globalForceHide = null;
-    }, 120);
+    }, 300);
   }, [forceHide]);
   const cancelHide = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
+  // Keyboard: hide immediately on blur unless focus moved into the tooltip itself
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    if (tooltipRef.current?.contains(e.relatedTarget as Node)) return;
+    forceHide();
+  }, [forceHide]);
+
+  // Tab on trigger → move focus into first focusable element in tooltip
+  const handleTriggerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { forceHide(); return; }
+    if (e.key === 'Tab' && !e.shiftKey && rect) {
+      const first = tooltipRef.current?.querySelector<HTMLElement>(
+        'a, button, [tabindex]:not([tabindex="-1"])'
+      );
+      if (first) { e.preventDefault(); first.focus(); }
+    }
+  }, [forceHide, rect]);
+
+  // Tab/Escape inside tooltip → return focus to trigger and close
+  const handleTooltipKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { forceHide(); ref.current?.focus(); return; }
+    if (e.key === 'Tab') {
+      const focusables = Array.from(
+        tooltipRef.current?.querySelectorAll<HTMLElement>(
+          'a, button, [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      );
+      if (focusables.length === 0) return;
+      const isLast  = !e.shiftKey && document.activeElement === focusables[focusables.length - 1];
+      const isFirst = e.shiftKey  && document.activeElement === focusables[0];
+      if (isLast || isFirst) { e.preventDefault(); forceHide(); ref.current?.focus(); }
+    }
+  }, [forceHide]);
+
+  // Determine if the tooltip has interactive content (Rich or Data with action)
+  const tipType = tip.props.type ?? 'Plain';
+  const isInteractive = (tipType === 'Rich' || tipType === 'Data') && tip.props.hasAction !== false;
+  const dialogLabel = tip.props.title ?? (tipType === 'Rich' ? 'Approaching camera limit' : 'Apple messenger');
+
+  // Forward mouse/keyboard/aria props directly onto the child button
+  const singleChild = React.Children.only(children) as React.ReactElement<React.HTMLAttributes<HTMLElement>>;
+  const enhancedChild = React.cloneElement(singleChild, {
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { show(); singleChild.props.onMouseEnter?.(e); },
+    onMouseLeave: (e: React.MouseEvent<HTMLElement>) => { hide(); singleChild.props.onMouseLeave?.(e); },
+    onFocus:      (e: React.FocusEvent<HTMLElement>)  => { show(); singleChild.props.onFocus?.(e); },
+    onKeyDown:    (e: React.KeyboardEvent<HTMLElement>) => { handleTriggerKeyDown(e); singleChild.props.onKeyDown?.(e); },
+    ...(isInteractive
+      ? { 'aria-expanded': !!rect, ...(rect ? { 'aria-controls': tooltipId } : {}) }
+      : { ...(rect ? { 'aria-describedby': tooltipId } : {}) }
+    ),
+  });
+
   return (
-    <div ref={ref} onMouseEnter={show} onMouseLeave={hide} className={className}>
-      {children}
+    <div
+      ref={ref}
+      onBlur={handleBlur}
+      className={className}
+    >
+      {enhancedChild}
       {rect && createPortal(
-        <div style={{ ...getFixedStyle(rect, placement), zIndex: 9999 }}
-          className={isDark ? 'dark' : ''}
-          onMouseEnter={cancelHide} onMouseLeave={hide}>
-          {tip}
-        </div>,
+        <>
+          {/* Bridge and hover-persistence only for interactive tooltips (Rich/Data with action) */}
+          {isInteractive && (
+            <div
+              aria-hidden="true"
+              style={{ ...getBridgeStyle(rect, resolvedPlacement), zIndex: 8999 }}
+              onMouseEnter={cancelHide}
+              onMouseLeave={hide}
+            />
+          )}
+          <div
+            ref={tooltipRef}
+            id={tooltipId}
+            role={isInteractive ? 'dialog' : 'tooltip'}
+            aria-modal={isInteractive ? true : undefined}
+            aria-label={isInteractive ? dialogLabel : undefined}
+            style={{ ...getFixedStyle(rect, resolvedPlacement), zIndex: 9000 }}
+            className={isDark ? 'dark' : ''}
+            onMouseEnter={isInteractive ? cancelHide : undefined}
+            onMouseLeave={isInteractive ? hide : undefined}
+            onKeyDown={handleTooltipKeyDown}
+          >
+            {React.cloneElement(tip, { placement: resolvedPlacement })}
+          </div>
+        </>,
         document.body
       )}
     </div>
@@ -77,6 +194,48 @@ function IcoFile()     { return <svg width="18" height="18" viewBox="0 0 18 18" 
 function IcoInfo()     { return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/><path d="M8 7v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="5" r="0.7" fill="currentColor"/></svg>; }
 function IcoSun()      { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.8" stroke="currentColor" strokeWidth="1.4"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.27 1.27M11.33 11.33l1.27 1.27M11.33 4.67l-1.27 1.27M4.67 11.33l-1.27 1.27" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>; }
 function IcoMoon()     { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 9.8A5.8 5.8 0 0 1 6.2 2.5a5.8 5.8 0 1 0 7.3 7.3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>; }
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+
+function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // Trigger enter animation on next frame
+    const enter = requestAnimationFrame(() => setVisible(true));
+    const exit = setTimeout(() => setVisible(false), 2700);
+    const done = setTimeout(onDone, 3000);
+    return () => { cancelAnimationFrame(enter); clearTimeout(exit); clearTimeout(done); };
+  }, [onDone]);
+
+  return createPortal(
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        bottom: 32,
+        left: '50%',
+        transform: `translateX(-50%) translateY(${visible ? 0 : 12}px)`,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 220ms ease, transform 220ms ease',
+        zIndex: 9999,
+        background: '#1a1a1a',
+        color: '#f9f9f9',
+        padding: '10px 20px',
+        borderRadius: 10,
+        fontSize: 14,
+        fontWeight: 500,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {message}
+    </div>,
+    document.body
+  );
+}
 
 // ─── Chart constants & data ────────────────────────────────────────────────
 
@@ -107,15 +266,15 @@ const DL_AREA=`${DL_PATH} L${DL_PTS[N-1].x},${VH-PB} L${DL_PTS[0].x},${VH-PB} Z`
 function fmtBps(v:number){return v>=1?`${v.toFixed(2)} Mbps`:`${(v*1024).toFixed(0)} Kbps`;}
 function fmtTimeLabel(i:number){const h=[0,6,12,18][i%4];const ampm=h<12?'AM':'PM';const hh=h===0?12:h>12?h-12:h;return `Mar ${18+Math.floor(i/4)}, ${hh}:00 ${ampm}`;}
 function makeRows(i:number): DataRow[]{return[
-  {label:'Download',   value:fmtBps(DOWNLOAD[i]),              color:'download',trend:'down'},
-  {label:'Upload',     value:fmtBps(UPLOAD[i]),                color:'upload',  trend:'up'  },
-  {label:'Latency',    value:`${LATENCY[i]} ms`,               color:'latency', trend:null  },
-  {label:'Packet Loss',value:`${LOSS[i].toFixed(1)} %`,        color:'loss',    trend:null  },
+  {label:'Download',   value:fmtBps(DOWNLOAD[i]),       color:'download', icon:<ArrowDownIcon className="size-4 shrink-0 text-chart-download"/>},
+  {label:'Upload',     value:fmtBps(UPLOAD[i]),         color:'upload',   icon:<ArrowUpIcon   className="size-4 shrink-0 text-chart-upload"  />},
+  {label:'Latency',    value:`${LATENCY[i]} ms`,        color:'latency'},
+  {label:'Packet Loss',value:`${LOSS[i].toFixed(1)} %`, color:'loss'},
 ];}
 
 // ─── Mobile scene (iPhone 15) ─────────────────────────────────────────────
 
-function MobileScene({ isDark }: { isDark: boolean }) {
+function MobileScene({ isDark, onAction }: { isDark: boolean; onAction: () => void }) {
   const [open, setOpen] = useState(false);
 
   const mBg      = isDark ? '#111827' : '#f4f5f7';
@@ -256,10 +415,10 @@ function MobileScene({ isDark }: { isDark: boolean }) {
             <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', flexDirection:'column', justifyContent:'flex-end' }}
               onClick={()=>setOpen(false)}>
               <div onClick={e=>e.stopPropagation()} className="dark">
-                <MobileTooltip hasTitle hasAction
+                <MobileTooltip hasTitle={false} hasAction
                   title="Face Recognition"
                   textLong="Enable Face Recognition in settings to use Spotlight for Known Faces. This feature requires a compatible camera and an active Protect subscription."
-                  onAction={()=>setOpen(false)} />
+                  onAction={()=>{ setOpen(false); onAction(); }} />
               </div>
             </div>
           )}
@@ -312,6 +471,8 @@ const RICH_FEATURES = [
 
 export default function TooltipDemo() {
   const [isDark, setIsDark] = useState(false);
+  const [toast, setToast] = useState(false);
+  const showToast = useCallback(() => setToast(true), []);
 
   // Chart state
   const chartRef   = useRef<HTMLDivElement>(null);
@@ -330,7 +491,7 @@ export default function TooltipDemo() {
     setTipStyle({ position:'fixed', zIndex:9999, bottom: window.innerHeight - sy + GAP, left: sx, transform:'translateX(-50%)' });
   }
   function handleChartLeave() {
-    chartHideTimer.current = window.setTimeout(() => { setHoveredIdx(null); setTipStyle(null); }, 120);
+    chartHideTimer.current = window.setTimeout(() => { setHoveredIdx(null); setTipStyle(null); }, 300);
   }
 
   // Theme
@@ -370,6 +531,7 @@ export default function TooltipDemo() {
   };
 
   return (
+    <>
     <DarkCtx.Provider value={isDark}>
     <div style={{ fontFamily:"'Inter', sans-serif", background: pageBg, minHeight:'100vh' }}>
 
@@ -434,7 +596,7 @@ export default function TooltipDemo() {
                 style={{ borderBottom: i < RICH_FEATURES.length - 1 ? `1px solid ${uBorder}` : 'none' }}>
                 <span className="text-sm mr-1" style={{ color: uSubtext }}>{f.label}</span>
                 <Anchor placement="Right"
-                  tip={<Tooltip type="Rich" placement="Right" hasTitle hasAction title={f.label} textLong={f.tip} onAction={() => {}} />}>
+                  tip={<Tooltip type="Rich" placement="Right" hasTitle={false} hasAction textLong={f.tip} onAction={showToast} />}>
                   <button className="flex items-center" style={{ color: '#006fff' }}>
                     <IcoInfo />
                   </button>
@@ -457,7 +619,7 @@ export default function TooltipDemo() {
               <button style={textBtn}>With title</button>
             </Anchor>
             <Anchor placement="Up"
-              tip={<Tooltip type="Rich" placement="Up" hasTitle hasAction onAction={() => {}} />}>
+              tip={<Tooltip type="Rich" placement="Up" hasTitle hasAction onAction={showToast} />}>
               <button style={textBtn}>With action</button>
             </Anchor>
           </div>
@@ -548,16 +710,16 @@ export default function TooltipDemo() {
               <button style={textBtn}>With subtitle</button>
             </Anchor>
             <Anchor placement="Up"
-              tip={<Tooltip type="Data" placement="Up" hasTitle hasSubtitle hasAction onAction={() => {}} />}>
+              tip={<Tooltip type="Data" placement="Up" hasTitle hasSubtitle hasAction onAction={showToast} />}>
               <button style={textBtn}>With action</button>
             </Anchor>
             <Anchor placement="Up"
               tip={<Tooltip type="Data" placement="Up" hasTitle={false} hasSubtitle={false} hasAction={false}
                 dataRows={[
-                  { label: 'Download', value: '7.05 KB', color: 'download', trend: 'down', hasLegend: false, hasIcon: false },
-                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   trend: 'up',   hasLegend: false, hasIcon: false },
-                  { label: 'Latency',  value: '1 ms',    color: 'latency',  trend: null,   hasLegend: false, hasIcon: false },
-                  { label: 'Loss',     value: '0 %',     color: 'loss',     trend: null,   hasLegend: false, hasIcon: false },
+                  { label: 'Download', value: '7.05 KB', color: 'download', hasLegend: false },
+                  { label: 'Upload',   value: '7.05 KB', color: 'upload',   hasLegend: false },
+                  { label: 'Latency',  value: '1 ms',    color: 'latency',  hasLegend: false },
+                  { label: 'Loss',     value: '0 %',     color: 'loss',     hasLegend: false },
                 ]} />}>
               <button style={textBtn}>No legend &amp; icon</button>
             </Anchor>
@@ -569,7 +731,7 @@ export default function TooltipDemo() {
         {/* ── Mobile ── */}
         <Section title="Mobile Tooltip" desc="Bottom sheet for mobile contexts — tap ⓘ next to Face Recognition" isDark={isDark}>
           <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${uBorder}` }}>
-            <MobileScene isDark={isDark} />
+            <MobileScene isDark={isDark} onAction={showToast} />
           </div>
 
           <Divider isDark={isDark} />
@@ -602,7 +764,7 @@ export default function TooltipDemo() {
                   <MobileTooltip hasTitle hasAction
                     title="Face Recognition"
                     textLong="Enable Face Recognition in settings to use Spotlight for Known Faces."
-                    onAction={() => {}} />
+                    onAction={showToast} />
                 </div>
               }>
               <button style={textBtn}>With action</button>
@@ -620,12 +782,16 @@ export default function TooltipDemo() {
           <Tooltip type="Data" placement="Up" hasTitle hasSubtitle hasAction
             title="Dream Router 7"
             subtitle={fmtTimeLabel(hoveredIdx)}
-            dataRows={makeRows(hoveredIdx)} />
+            dataRows={makeRows(hoveredIdx)}
+            onAction={showToast} />
         </div>,
         document.body
       )}
 
     </div>
     </DarkCtx.Provider>
+
+    {toast && <Toast message="Open a new page" onDone={() => setToast(false)} />}
+    </>
   );
 }

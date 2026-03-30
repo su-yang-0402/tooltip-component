@@ -3,7 +3,7 @@
 @theme {
   --color-tooltip: #262626;
   --color-text-inverse: #f9f9f9;
-  --color-text-inverse-subtle: #a3a3a3;
+  --color-text-inverse-subtle: #d4d4d4;
   --color-action-primary: #4093ff;
   --color-text-primary-hover: #005ed9;
   --color-chart-download: #4acfdc;
@@ -12,6 +12,8 @@
   --color-chart-loss: #e03030;
 
   --radius-tooltip: 8px;
+  --radius-sheet: 16px;
+  --radius-full: 9999px;
   --shadow-tooltip: 0px 4px 16px rgba(0, 0, 0, 0.12);
 
   --text-body-xs:   12px;
@@ -40,7 +42,7 @@ body {
 /* Dark mode overrides — applied when .dark class is present on an ancestor */
 .dark {
   --color-tooltip: #404040;
-  --color-text-inverse-subtle: #d4d4d4;
+  --color-text-inverse-subtle: #d4d4d4; /* unchanged — already grey/300 */
   --color-action-primary: #80b7ff;
   --color-text-primary-hover: #4093ff;
   --color-chart-loss: #ff6b6b;

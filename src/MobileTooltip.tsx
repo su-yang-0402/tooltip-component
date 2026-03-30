@@ -10,7 +10,6 @@ export interface MobileTooltipProps {
   textLong?: string;
   /** Called when the "Learn more" action is clicked */
   onAction?: () => void;
-  className?: string;
 }
 
 export default function MobileTooltip({
@@ -19,15 +18,9 @@ export default function MobileTooltip({
   title = 'Approaching camera limit',
   textLong = 'This is long text paragraph to explain the functionality and additional information for users',
   onAction,
-  className,
 }: MobileTooltipProps) {
   return (
-    <div
-      className={
-        className ??
-        'relative flex flex-col items-start bg-tooltip rounded-t-[16px] px-4 py-6 gap-3 w-full'
-      }
-    >
+    <div className="relative flex flex-col items-start bg-tooltip rounded-t-sheet px-4 py-6 gap-3 w-full">
       {/* Handle bar */}
       <div className="flex items-center justify-center w-full pb-2">
         <div className="w-8 h-1 rounded-full bg-text-inverse-subtle shrink-0" />
